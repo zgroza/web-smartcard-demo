@@ -22,14 +22,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
       - name: Extract version from package.json
         id: package_version
         run: |
@@ -44,6 +36,16 @@ jobs:
           else
             echo "${PREVIOUS_VERSION:+Last release was }$PREVIOUS_VERSION${PREVIOUS_VERSION:-No prior release}, building now $VERSION."
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
 
       - name: Build the signed web bundle
         run: npm run build
