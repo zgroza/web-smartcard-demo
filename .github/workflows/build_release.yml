@@ -4,15 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.2.3)'
+        description: "Version to release (e.g., 1.2.3)"
         required: true
         type: string
       key_password:
-        description: 'Password for the encrypted private signing key'
+        description: "Password for the encrypted private signing key"
         required: true
         type: string
       environment:
-        description: 'Environment to use'
+        description: "Environment to use"
         type: environment
         required: true
 
@@ -38,16 +38,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Prepare signing key file and path
-        env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-        run: |
-          echo "$SIGNING_KEY" > private_key.pem
-          echo "PRIVATE_KEY_PATH=$(pwd)/private_key.pem" >> $GITHUB_ENV
-
       - name: Build the signed web bundle
         run: npm run build
         env:
+          PRIVATE_KEY: ${{ secrets.SIGNING_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ github.event.inputs.key_password }} # Directly from workflow input
 
       - name: Prepare SWBN asset
