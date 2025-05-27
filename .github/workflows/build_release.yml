@@ -3,10 +3,6 @@ name: Create Release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to release (e.g., 1.2.3)"
-        required: true
-        type: string
       key_password:
         description: "Password for the encrypted private signing key"
         required: true
@@ -38,6 +34,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Extract version from package.json
+        id: package_version
+        run: |
+          echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
+
       - name: Build the signed web bundle
         run: npm run build
         env:
@@ -49,7 +50,7 @@ jobs:
         run: |
           set -e
           ORIGINAL_SWBN_PATH="./dist/smart_card_demo.swbn" # Expected output from webpack.wbn.js
-          VERSIONED_SWBN_FILENAME="smart_card_demo_${{ github.event.inputs.version }}.swbn"
+          VERSIONED_SWBN_FILENAME="smart_card_demo_${{ steps.package_version.outputs.version }}.swbn"
           VERSIONED_SWBN_PATH="./dist/$VERSIONED_SWBN_FILENAME"
 
           if [ ! -f "$ORIGINAL_SWBN_PATH" ]; then
@@ -69,7 +70,7 @@ jobs:
           set -e
 
           SWBN_FILENAME_FOR_JSON="${{ steps.swbn_asset_prep.outputs.swbn_filename }}"
-          NEW_ENTRY_SRC="https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.version }}/$SWBN_FILENAME_FOR_JSON"
+          NEW_ENTRY_SRC="https://github.com/${{ github.repository }}/releases/download/${{ steps.package_version.outputs.version }}/$SWBN_FILENAME_FOR_JSON"
 
           # Attempt to download update.json from the latest existing release
           LATEST_RELEASE_TAG=$(gh release list --repo "${{ github.repository }}" --limit 1 --json tagName --jq '.[0].tagName' || echo "")
@@ -95,7 +96,7 @@ jobs:
 
           # Add new version entry, prepending to the 'versions' array for newest first
           UPDATED_JSON_CONTENT=$(echo "$EXISTING_UPDATE_JSON_CONTENT" | jq \
-            --arg version "${{ github.event.inputs.version }}" \
+            --arg version "${{ steps.package_version.outputs.version }}" \
             --arg src "$NEW_ENTRY_SRC" \
             '.versions |= [{ "version": $version, "src": $src }] + .')
 
@@ -110,8 +111,8 @@ jobs:
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git tag -a "${{ github.event.inputs.version }}" -m "Release ${{ github.event.inputs.version }}"
-          git push origin "${{ github.event.inputs.version }}"
+          git tag -a "${{ steps.package_version.outputs.version }}" -m "Release ${{ steps.package_version.outputs.version }}"
+          git push origin "${{ steps.package_version.outputs.version }}"
 
       - name: Create GitHub Release
         env:
@@ -122,7 +123,7 @@ jobs:
         run: |
           set -e
           WEB_BUNDLE_ID="cpt62davrxj4yzauslsummydorzgy2kcnhbayaziceuqlzhaue7qaaic"
-          UPDATE_MANIFEST_URL="https://github.com/$GH_REPO/releases/download/${{ github.event.inputs.version }}/update.json"
+          UPDATE_MANIFEST_URL="https://github.com/$GH_REPO/releases/download/${{ steps.package_version.outputs.version }}/update.json"
 
           # Prepare release notes to a temporary file for correct formatting
           NOTES_FILE="release_notes.md"
@@ -130,7 +131,7 @@ jobs:
 
           ASSET_ARGS=("$SWBN_ASSET_PATH" "$UPDATE_JSON_ASSET_PATH")
 
-          gh release create "${{ github.event.inputs.version }}" "${ASSET_ARGS[@]}" \
+          gh release create "${{ steps.package_version.outputs.version }}" "${ASSET_ARGS[@]}" \
             --repo "$GH_REPO" \
-            --title "Release ${{ github.event.inputs.version }}" \
+            --title "Release ${{ steps.package_version.outputs.version }}" \
             --notes-file "$NOTES_FILE" # Changed from --notes to --notes-file
