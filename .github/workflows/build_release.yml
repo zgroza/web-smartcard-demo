@@ -1,6 +1,11 @@
 name: Create Release
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "package.json"
   workflow_dispatch:
     inputs:
       environment:
@@ -33,7 +38,17 @@ jobs:
       - name: Extract version from package.json
         id: package_version
         run: |
-          echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
+          VERSION=$(jq -r .version package.json)
+          PREVIOUS_VERSION=$(gh release list --repo '${{ github.repository }}' --limit 1 --json tagName --jq '.[0].tagName')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+
+          if [ $PREVIOUS_VERSION = $VERSION ]; then
+            echo "A release of this version already exists, skipping."
+            exit 0
+          else
+            echo "${PREVIOUS_VERSION:+Last release was }$PREVIOUS_VERSION${PREVIOUS_VERSION:-No prior release}, building now $VERSION."
+          fi
 
       - name: Build the signed web bundle
         run: npm run build
@@ -67,8 +82,7 @@ jobs:
           SWBN_FILENAME_FOR_JSON="${{ steps.swbn_asset_prep.outputs.swbn_filename }}"
           NEW_ENTRY_SRC="https://github.com/${{ github.repository }}/releases/download/${{ steps.package_version.outputs.version }}/$SWBN_FILENAME_FOR_JSON"
 
-          # Attempt to download update.json from the latest existing release
-          LATEST_RELEASE_TAG=$(gh release list --repo "${{ github.repository }}" --limit 1 --json tagName --jq '.[0].tagName' || echo "")
+          LATEST_RELEASE_TAG=${{ steps.package_version.outputs.previous_version }}
 
           EXISTING_UPDATE_JSON_CONTENT="{\"versions\": []}" # Default if no previous version or file found
           if [ -n "$LATEST_RELEASE_TAG" ]; then
