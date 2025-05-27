@@ -6,18 +6,12 @@ on:
       - main
     paths:
       - "package.json"
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment to use"
-        type: environment
-        required: true
 
 jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
+    environment: "Signing of the bundle"
     permissions:
       contents: write
 
