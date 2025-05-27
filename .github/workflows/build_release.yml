@@ -25,9 +25,7 @@ jobs:
         id: package_version
         run: |
           VERSION=$(jq -r .version package.json)
-          PREVIOUS_VERSION=$(gh release list --repo '${{ github.repository }}' --limit 1 --json tagName --jq '.[0].tagName')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+          PREVIOUS_VERSION=$(gh release list --repo '${{ github.repository }}' --json tagName --jq '.[0].tagName')
 
           if [ $PREVIOUS_VERSION = $VERSION ]; then
             echo "A release of this version already exists."
@@ -35,6 +33,9 @@ jobs:
           else
             echo "${PREVIOUS_VERSION:+Last release was }$PREVIOUS_VERSION${PREVIOUS_VERSION:-No prior release}, building now $VERSION."
           fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
