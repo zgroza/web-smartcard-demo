@@ -39,11 +39,11 @@ jobs:
         run: npm install
 
       - name: Prepare signing key file and path
-        run: |
-          echo "${{ secrets.SIGNING_KEY }}" > private_key.pem
-          echo "PRIVATE_KEY_PATH=$(pwd)/private_key.pem" >> $GITHUB_ENV
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          echo "$SIGNING_KEY" > private_key.pem
+          echo "PRIVATE_KEY_PATH=$(pwd)/private_key.pem" >> $GITHUB_ENV
 
       - name: Build the signed web bundle
         run: npm run build
@@ -105,10 +105,10 @@ jobs:
             --arg src "$NEW_ENTRY_SRC" \
             '.versions |= [{ "version": $version, "src": $src }] + .')
 
-          echo "$UPDATED_JSON_CONTENT" > new_update.json
-          echo "Generated new_update.json:"
-          cat new_update.json
-          echo "update_json_path=$(pwd)/new_update.json" >> $GITHUB_OUTPUT
+          echo "$UPDATED_JSON_CONTENT" > update.json
+          echo "Generated update.json:"
+          cat update.json
+          echo "update_json_path=$(pwd)/update.json" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -130,12 +130,13 @@ jobs:
           WEB_BUNDLE_ID="cpt62davrxj4yzauslsummydorzgy2kcnhbayaziceuqlzhaue7qaaic"
           UPDATE_MANIFEST_URL="https://github.com/$GH_REPO/releases/download/${{ github.event.inputs.version }}/update.json"
 
-          # JSON snippet for release description, formatted in a Markdown code block
-          DESCRIPTION_SNIPPET_FOR_NOTES="\n\n---\n\n\`\`\`json\n[\n  {\n    \"web_bundle_id\": \"$WEB_BUNDLE_ID\",\n    \"update_manifest_url\": \"$UPDATE_MANIFEST_URL\"\n  }\n]\n\`\`\`"
+          # Prepare release notes to a temporary file for correct formatting
+          NOTES_FILE="release_notes.md"
+          echo -e "---\n\n\`\`\`json\n[\n  {\n    \"web_bundle_id\": \"$WEB_BUNDLE_ID\",\n    \"update_manifest_url\": \"$UPDATE_MANIFEST_URL\"\n  }\n]\n\`\`\`" > "$NOTES_FILE"
 
           ASSET_ARGS=("$SWBN_ASSET_PATH" "$UPDATE_JSON_ASSET_PATH")
 
           gh release create "${{ github.event.inputs.version }}" "${ASSET_ARGS[@]}" \
             --repo "$GH_REPO" \
             --title "Release ${{ github.event.inputs.version }}" \
-            --notes "$DESCRIPTION_SNIPPET_FOR_NOTES"
+            --notes-file "$NOTES_FILE" # Changed from --notes to --notes-file
