@@ -3,10 +3,6 @@ name: Create Release
 on:
   workflow_dispatch:
     inputs:
-      key_password:
-        description: "Password for the encrypted private signing key"
-        required: true
-        type: string
       environment:
         description: "Environment to use"
         type: environment
@@ -43,7 +39,6 @@ jobs:
         run: npm run build
         env:
           PRIVATE_KEY: ${{ secrets.SIGNING_KEY }}
-          PRIVATE_KEY_PASSWORD: ${{ github.event.inputs.key_password }} # Directly from workflow input
 
       - name: Prepare SWBN asset
         id: swbn_asset_prep
