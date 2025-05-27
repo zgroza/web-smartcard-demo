@@ -1,12 +1,11 @@
 name: Create Release
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "package.json"
   workflow_dispatch:
+    environment:
+      description: "Environment to use"
+      type: environment
+      required: true
 
 jobs:
   release:
@@ -31,8 +30,8 @@ jobs:
           echo "previous_version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
 
           if [ $PREVIOUS_VERSION = $VERSION ]; then
-            echo "A release of this version already exists, skipping."
-            exit 0
+            echo "A release of this version already exists."
+            exit 1
           else
             echo "${PREVIOUS_VERSION:+Last release was }$PREVIOUS_VERSION${PREVIOUS_VERSION:-No prior release}, building now $VERSION."
           fi
